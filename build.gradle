@@ -1,0 +1,14 @@
+apply plugin: 'groovy'
+apply plugin: 'idea'
+
+defaultTasks 'idea'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.atlassian.com/repository/public' }
+}
+
+dependencies {
+    compile 'org.codehaus.groovy:groovy-all:2.3.6'
+    compile 'com.atlassian.jira:jira-core:6.3.6'
+}
