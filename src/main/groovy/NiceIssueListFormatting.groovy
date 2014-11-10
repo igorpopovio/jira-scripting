@@ -1,9 +1,6 @@
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.jira.config.properties.APKeys
-import com.atlassian.jira.event.type.EventDispatchOption
 import com.atlassian.jira.issue.MutableIssue
-import com.atlassian.jira.issue.UpdateIssueRequest
-import com.atlassian.jira.issue.label.LabelManager
 import com.atlassian.jira.issue.search.SearchProvider
 import com.atlassian.jira.jql.parser.JqlQueryParser
 import com.atlassian.jira.web.bean.PagerFilter
@@ -19,24 +16,30 @@ def mainMethod() {
     logImportantMessage "Found ${issues.size()} issues. Here they are:"
     logIssues(issues)
 
-    def newLabel = "productivity"
-    logImportantMessage "Will add the ${newLabel} to all mentioned issues..."
-    issues.each { issue -> addLabelToIssue(issue, newLabel) }
-
-    // updateIssues(issues)
-    logImportantMessage "Successfully updated all the mentioned issues..."
-
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
 }
 
 def logIssues(Collection<MutableIssue> issues) {
-    logMessage "<pre>"
+    def tableStart = """
+    <table id="issueTable" class="aui aui-table-sortable">
+    <thead>
+    <tr>
+        <th class="aui-table-column-issue-key">Issue</th>
+        <th>Summary</th>
+    </tr>
+    </thead>
+    <tbody>
+    """
+
+    logMessage tableStart
     issues.each { issue -> logMessage formatIssue(issue) }
-    logMessage "</pre>"
+
+    def tableEnd = "</tbody></table>"
+    logMessage tableEnd
 }
 
 def logMessage(Object message) {
-    finalMessage += "${message}<br/>"
+    finalMessage += "${message}"
 }
 
 def logImportantMessage(Object message) {
@@ -46,7 +49,7 @@ def logImportantMessage(Object message) {
 def formatIssue(MutableIssue issue) {
     def issueLink = getIssueLink(issue)
     def htmlLink = "<a href=\"${issueLink}\">${issue.key}</a>"
-    "<strong>${htmlLink}</strong> - ${issue.summary}"
+    "<tr><td>$htmlLink</td><td>${issue.summary}</td></tr>"
 }
 
 def getIssueLink(MutableIssue issue) {
@@ -64,28 +67,6 @@ def findIssues(String jqlQuery) {
     def query = jqlQueryParser.parseQuery(jqlQuery)
     def results = searchProvider.search(query, user, PagerFilter.unlimitedFilter)
     results.issues.collect { issue -> issueManager.getIssueObject(issue.id) }
-}
-
-def updateIssues(Collection<MutableIssue> issues) {
-    def user = ComponentAccessor.jiraAuthenticationContext.user
-    def issueManager = ComponentAccessor.issueManager
-    issues.each { issue ->
-        issueManager.updateIssue(user, issue, createIssueUpdateRequest())
-    }
-}
-
-def createIssueUpdateRequest() {
-    new UpdateIssueRequest.UpdateIssueRequestBuilder()
-            .eventDispatchOption(EventDispatchOption.DO_NOT_DISPATCH)
-            .sendMail(false)
-            .build()
-}
-
-def addLabelToIssue(MutableIssue issue, String label) {
-    def labelManager = ComponentAccessor.getComponent(LabelManager.class)
-    def user = ComponentAccessor.jiraAuthenticationContext.user.directoryUser
-    def sendEmailUpdates = false
-    labelManager.addLabel(user, issue.id, label, sendEmailUpdates)
 }
 
 mainMethod()
