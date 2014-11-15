@@ -22,11 +22,15 @@ def mainMethod() {
     logMessage filter.query.queryString
     logMessage filter.query.whereClause.toString()
 
-    def jqlQuery = "project = DEMO"
+    def jqlQuery = filter.query.queryString + " ORDER BY issueKey"
     logMessage "Creating a query object from a string: \"${jqlQuery}\""
 
     def query = createQueryFromJqlQuery(jqlQuery)
     logMessage query
+
+    filter.query = query
+    def persistedFilter = searchRequestService.updateFilter(createServiceContext(user), filter)
+    logMessage "The id of the persisted filter is: ${persistedFilter.id}"
 
     logImportantMessage "------------------"
 
