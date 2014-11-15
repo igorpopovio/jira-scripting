@@ -1,5 +1,6 @@
 import com.atlassian.jira.bc.JiraServiceContextImpl
 import com.atlassian.jira.bc.filter.SearchRequestService
+import com.atlassian.jira.bc.issue.search.SearchService
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.jira.user.ApplicationUser
 
@@ -19,6 +20,13 @@ def mainMethod() {
     logMessage filter.id
     logMessage filter.name
     logMessage filter.query.queryString
+    logMessage filter.query.whereClause.toString()
+
+    def jqlQuery = "project = DEMO"
+    logMessage "Creating a query object from a string: \"${jqlQuery}\""
+
+    def query = createQueryFromJqlQuery(jqlQuery)
+    logMessage query
 
     logImportantMessage "------------------"
 
@@ -35,6 +43,21 @@ def logImportantMessage(Object message) {
 
 def createServiceContext(ApplicationUser user) {
     new JiraServiceContextImpl(user)
+}
+
+def createQueryFromJqlQuery(String jqlQuery) {
+    def user = ComponentAccessor.jiraAuthenticationContext.user.directoryUser
+    def searchService = ComponentAccessor.getComponent(SearchService.class)
+
+    def parseResult = searchService.parseQuery(user, jqlQuery);
+
+    if (!parseResult.isValid())
+        throw new RuntimeException("The query is not valid! query = ${jqlQuery}")
+
+    // not needed - it is here just so I don't forget it...
+    def searchContext = searchService.getSearchContext(user, parseResult.getQuery());
+
+    return parseResult.getQuery()
 }
 
 mainMethod()
