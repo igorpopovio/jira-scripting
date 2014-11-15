@@ -1,6 +1,7 @@
 import com.atlassian.jira.bc.JiraServiceContextImpl
 import com.atlassian.jira.bc.portal.PortalPageService
 import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.jira.portal.PortletConfiguration
 import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
@@ -31,6 +32,7 @@ def mainMethod() {
         def configurations = portalPageService.getPortletConfigurations(createServiceContext(user), page.id)
         configurations.each { line ->
             line.each { gadget ->
+                logImportantMessage "<h2>${getGadgetName(gadget)}</h2>"
                 logMessage gadget.id
                 logMessage gadget.color
                 logMessage gadget.gadgetURI
@@ -43,6 +45,13 @@ def mainMethod() {
     }
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+}
+
+def getGadgetName(PortletConfiguration gadget) {
+    def uri = gadget.gadgetURI.toString()
+    def filename = uri.substring(uri.lastIndexOf('/') + 1)
+    filename = filename.substring(0, filename.lastIndexOf('.'))
+    filename.replace('-', ' ').capitalize()
 }
 
 def logMessage(Object message) {
