@@ -1,7 +1,7 @@
-import com.atlassian.crowd.embedded.api.User
 import com.atlassian.jira.bc.JiraServiceContextImpl
 import com.atlassian.jira.bc.portal.PortalPageService
 import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
 
@@ -17,15 +17,18 @@ def mainMethod() {
     // - these gadgets have a "userPrefs" map that can be changed based on need
 
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
-    def user = ComponentAccessor.jiraAuthenticationContext.user
+    // def user = ComponentAccessor.jiraAuthenticationContext.user
+    def userName = "PUT JIRA USERNAME HERE"
+    def user = ComponentAccessor.userManager.getUserByKey(userName)
     def pages = portalPageService.getOwnedPortalPages(user)
 
+    logImportantMessage "Showing all dashboards for the current user..."
     pages.each { page ->
         logImportantMessage "<h1>${page.name}</h1>"
         logMessage page.id
         logMessage page.ownerUserName
         logImportantMessage "CONFIGURATIONS"
-        def configurations = portalPageService.getPortletConfigurations(createServiceContext(), page.id)
+        def configurations = portalPageService.getPortletConfigurations(createServiceContext(user), page.id)
         configurations.each { line ->
             line.each { gadget ->
                 logMessage gadget.id
@@ -50,8 +53,7 @@ def logImportantMessage(Object message) {
     logMessage "<strong>${message}</strong>"
 }
 
-def createServiceContext() {
-    User user = ComponentAccessor.jiraAuthenticationContext.user.directoryUser
+def createServiceContext(ApplicationUser user) {
     new JiraServiceContextImpl(user)
 }
 
