@@ -37,7 +37,10 @@ def mainMethod() {
                 logMessage gadget.color
                 logMessage gadget.gadgetURI
                 gadget.userPrefs.each { preference ->
-                    logMessage "${preference.key} = ${preference.value}"
+                    def isFilter = preference.key.toLowerCase().contains('filter')
+                    def preferenceStatus = "${preference.key} = ${preference.value}"
+                    if (isFilter) logImportantMessage preferenceStatus
+                    else logMessage preferenceStatus
                 }
             }
         }
