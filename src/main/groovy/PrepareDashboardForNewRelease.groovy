@@ -33,18 +33,12 @@ def mainMethod() {
     def gadgets = portalPageService
             .getPortletConfigurations(createServiceContext(user), clonedPortalPage.id)
             .flatten()
-    def gadgetsWithFilters = findAllGadgetsWithFilters(gadgets)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
                 SearchRequest oldFilter = extractFilterFrom(preference)
                 SearchRequest newFilter = createFilterBasedOn(oldFilter)
-
-                def newUserPrefs = new HashMap<>(gadget.userPrefs)
-                newUserPrefs[preference.key] = "filter-$newFilter.id".toString()
-                gadget.userPrefs = newUserPrefs
-                def gadgetManager = ComponentAccessor.getComponent(PortletConfigurationManager.class)
-                gadgetManager.store(gadget)
+                setGadgetFilter(gadget, preference.key, newFilter)
             }
         }
     }
@@ -55,6 +49,15 @@ def mainMethod() {
     logImportantMessage "------------------"
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+}
+
+def setGadgetFilter(PortletConfiguration gadget, String key, SearchRequest filter) {
+    def newUserPrefs = new HashMap<>(gadget.userPrefs)
+    newUserPrefs[key] = "filter-$filter.id".toString()
+    gadget.userPrefs = newUserPrefs
+
+    def gadgetManager = ComponentAccessor.getComponent(PortletConfigurationManager.class)
+    gadgetManager.store(gadget)
 }
 
 def extractFilterFrom(Map.Entry<String, String> preference) {
@@ -112,10 +115,8 @@ def createNewPortalPage(PortalPage portalPage) {
             .build();
 }
 
-mainMethod()
-
 def extractFilterIdFrom(Map.Entry<String, String> preference) {
-    // filter-12345
+    // example preference.value: "filter-12345"
     preference.value.replace("filter-", "").toLong()
 }
 
@@ -125,11 +126,4 @@ def createQueryFromJqlQuery(String jqlQuery) {
     return searchService.parseQuery(user, jqlQuery).getQuery()
 }
 
-def findAllGadgetsWithFilters(ArrayList<PortletConfiguration> gadgets) {
-    def gadgetsWithFilters = []
-    gadgets.each { gadget ->
-        def withFilter = gadget.userPrefs.any { preference -> hasFilter(preference) }
-        if (withFilter) gadgetsWithFilters << gadget
-    }
-    return gadgetsWithFilters
-}
+mainMethod()
