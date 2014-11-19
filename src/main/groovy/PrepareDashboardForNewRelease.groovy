@@ -39,7 +39,7 @@ def mainMethod() {
 }
 
 def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply) {
-    def newDashboard = clonePortalPageById(idOfPortalPageToClone)
+    def newDashboard = clonePortalPageById(idOfPortalPageToClone, changeToApply)
     def gadgets = extractGadgetsFrom(newDashboard)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
@@ -50,7 +50,6 @@ def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply)
             }
         }
     }
-    // newDashboard.name = changeToApply(newDashboard.name)
     newDashboard
 }
 
@@ -99,16 +98,16 @@ def hasFilter(Map.Entry<String, String> preference) {
     preference.value.toLowerCase().contains('filter')
 }
 
-def clonePortalPageById(Long idOfPortalPageToClone) {
+def clonePortalPageById(Long idOfPortalPageToClone, Closure changeToApply) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
     def user = ComponentAccessor.jiraAuthenticationContext.user
 
     def portalPage = portalPageService.getPortalPage(createServiceContext(user), idOfPortalPageToClone)
 
-    def favourite = false
+    def favourite = true
     def newDashboard = portalPageService.createPortalPageByClone(
             createServiceContext(user),
-            createNewPortalPage(portalPage),
+            createNewPortalPage(portalPage, changeToApply),
             portalPage.id,
             favourite)
     portalPageService.updatePortalPage(createServiceContext(user),
@@ -128,10 +127,11 @@ def createServiceContext(ApplicationUser user) {
     new JiraServiceContextImpl(user)
 }
 
-def createNewPortalPage(PortalPage portalPage) {
+def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
     PortalPage
             .portalPage(portalPage)
-            .name("${portalPage.name} CLONED ON ${new Date()}")
+            .name(changeToApply(portalPage.name))
+            .description("#generated-by-script #date=${new Date().getTime()}")
             .build();
 }
 
