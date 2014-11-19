@@ -11,6 +11,10 @@ import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
 
+// TODO: add link to the new dashboard:
+// http://igors-laptop.local:2990/jira/secure/Dashboard.jspa?selectPageId=10310
+// $jiraBaseUrl/secure/Dashboard.jspa?selectPageId=$dashboard.id
+
 def mainMethod() {
     // This script must be run from Jira -> Administration -> Add-ons -> Script Console
 
@@ -22,17 +26,10 @@ def mainMethod() {
     // - the gadgets are represented by a "PortletConfiguration" class
     // - these gadgets have a "userPrefs" map that can be changed based on need
 
-    def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
-    def userName = "admin"
-    def user = ComponentAccessor.userManager.getUserByKey(userName)
-
     def idOfPortalPageToClone = 10100L
-    def portalPage = portalPageService.getPortalPage(createServiceContext(user), idOfPortalPageToClone)
-    def clonedPortalPage = clonePortalPage(user, portalPage)
 
-    def gadgets = portalPageService
-            .getPortletConfigurations(createServiceContext(user), clonedPortalPage.id)
-            .flatten()
+    def clonedPortalPage = clonePortalPageById(idOfPortalPageToClone)
+    def gadgets = extractGadgetsFrom(clonedPortalPage)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
@@ -49,6 +46,15 @@ def mainMethod() {
     logImportantMessage "------------------"
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+}
+
+def extractGadgetsFrom(PortalPage portalPage) {
+    def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
+    def user = ComponentAccessor.jiraAuthenticationContext.user
+
+    portalPageService
+            .getPortletConfigurations(createServiceContext(user), portalPage.id)
+            .flatten()
 }
 
 def setGadgetFilter(PortletConfiguration gadget, String key, SearchRequest filter) {
@@ -86,9 +92,13 @@ def hasFilter(Map.Entry<String, String> preference) {
     preference.value.toLowerCase().contains('filter')
 }
 
-def clonePortalPage(ApplicationUser user, PortalPage portalPage) {
-    def favourite = true
+def clonePortalPageById(Long idOfPortalPageToClone) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
+    def user = ComponentAccessor.jiraAuthenticationContext.user
+
+    def portalPage = portalPageService.getPortalPage(createServiceContext(user), idOfPortalPageToClone)
+
+    def favourite = true
     portalPageService.createPortalPageByClone(
             createServiceContext(user),
             createNewPortalPage(portalPage),
