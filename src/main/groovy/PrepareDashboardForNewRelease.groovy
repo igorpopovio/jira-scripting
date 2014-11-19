@@ -36,24 +36,10 @@ def mainMethod() {
     def gadgetsWithFilters = findAllGadgetsWithFilters(gadgets)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
-            if(hasFilter(preference)) {
-                def filterId = extractFilterIdFrom(preference)
-                logMessage "The filterId is: $filterId"
+            if (hasFilter(preference)) {
+                SearchRequest oldFilter = extractFilterFrom(preference)
+                SearchRequest newFilter = createFilterBasedOn(oldFilter)
 
-                def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
-                def filter = searchRequestManager.getSearchRequestById(filterId)
-                def oldQuery = filter.query.queryString
-                def newQuery = "key=DEMO-1"
-                logMessage "The old query is: $oldQuery"
-                logMessage "The new query is: $newQuery"
-
-                def query = createQueryFromJqlQuery(newQuery)
-                def newFilter = new SearchRequest(query)
-                newFilter.name = "$filter.name NEW ${new Date()}"
-                newFilter.owner = user
-                newFilter.permissions = filter.permissions
-
-                newFilter = searchRequestManager.create(newFilter)
                 def newUserPrefs = new HashMap<>(gadget.userPrefs)
                 newUserPrefs[preference.key] = "filter-$newFilter.id".toString()
                 gadget.userPrefs = newUserPrefs
@@ -69,6 +55,28 @@ def mainMethod() {
     logImportantMessage "------------------"
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+}
+
+def extractFilterFrom(Map.Entry<String, String> preference) {
+    def filterId = extractFilterIdFrom(preference)
+    logMessage "The filterId is: $filterId"
+    def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
+    searchRequestManager.getSearchRequestById(filterId)
+}
+
+def createFilterBasedOn(SearchRequest filter) {
+    def oldQuery = filter.query.queryString
+    def newQuery = "key=DEMO-1"
+    logMessage "The old query is: $oldQuery"
+    logMessage "The new query is: $newQuery"
+    def query = createQueryFromJqlQuery(newQuery)
+
+    def newFilter = new SearchRequest(query)
+    newFilter.name = "$filter.name NEW ${new Date()}"
+    newFilter.owner = filter.owner
+    newFilter.permissions = filter.permissions
+    def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
+    searchRequestManager.create(newFilter)
 }
 
 def hasFilter(Map.Entry<String, String> preference) {
