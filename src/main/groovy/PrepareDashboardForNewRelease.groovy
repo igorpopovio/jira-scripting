@@ -89,7 +89,7 @@ def createFilterBasedOn(SearchRequest filter, Closure changeToApply) {
     newFilter.name = changeToApply(filter.name)
     newFilter.owner = filter.owner
     newFilter.permissions = filter.permissions
-    newFilter.description = "#generated-by-script #date=${new Date().getTime()}"
+    newFilter.description = createScriptIdentificationTag()
     def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
     searchRequestManager.create(newFilter)
 }
@@ -131,8 +131,15 @@ def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
     PortalPage
             .portalPage(portalPage)
             .name(changeToApply(portalPage.name))
-            .description("#generated-by-script #date=${new Date().getTime()}")
+            .description(createScriptIdentificationTag())
             .build();
+}
+
+def createScriptIdentificationTag() {
+    def tag = "#generated-by-script #date=${new Date().getTime()}"
+    tag += "<br/>"
+    tag += "#clear-date=${new Date()}"
+    tag
 }
 
 def extractFilterIdFrom(Map.Entry<String, String> preference) {
