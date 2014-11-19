@@ -2,6 +2,7 @@ import com.atlassian.jira.bc.JiraServiceContextImpl
 import com.atlassian.jira.bc.issue.search.SearchService
 import com.atlassian.jira.bc.portal.PortalPageService
 import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.jira.config.properties.APKeys
 import com.atlassian.jira.issue.search.SearchRequest
 import com.atlassian.jira.issue.search.SearchRequestManager
 import com.atlassian.jira.portal.PortalPage
@@ -10,10 +11,6 @@ import com.atlassian.jira.portal.PortletConfigurationManager
 import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
-
-// TODO: add link to the new dashboard:
-// http://igors-laptop.local:2990/jira/secure/Dashboard.jspa?selectPageId=10310
-// $jiraBaseUrl/secure/Dashboard.jspa?selectPageId=$dashboard.id
 
 def mainMethod() {
     // This script must be run from Jira -> Administration -> Add-ons -> Script Console
@@ -26,10 +23,22 @@ def mainMethod() {
     // - the gadgets are represented by a "PortletConfiguration" class
     // - these gadgets have a "userPrefs" map that can be changed based on need
 
-    def idOfPortalPageToClone = 10100L
+    // how to get the id: go to the URL of the dashboard and take the id
+    // ex. http://localhost:2990/jira/secure/Dashboard.jspa?selectPageId=10100
+    def idOfDashboardToClone = 10100L
 
-    def clonedPortalPage = clonePortalPageById(idOfPortalPageToClone)
-    def gadgets = extractGadgetsFrom(clonedPortalPage)
+    def newDashboard = createNewDashboardBasedOn(idOfDashboardToClone)
+
+    logMessage "I have cloned the specified dashboard!"
+    logMessage "Here is the link: "
+    logImportantMessage getDashboardLink(newDashboard)
+
+    return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+}
+
+def createNewDashboardBasedOn(long idOfPortalPageToClone) {
+    def newDashboard = clonePortalPageById(idOfPortalPageToClone)
+    def gadgets = extractGadgetsFrom(newDashboard)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
@@ -39,13 +48,7 @@ def mainMethod() {
             }
         }
     }
-
-    logMessage "I have cloned the specified dashboard!"
-    logMessage "Here is the id: " + clonedPortalPage.id
-
-    logImportantMessage "------------------"
-
-    return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
+    newDashboard
 }
 
 def extractGadgetsFrom(PortalPage portalPage) {
@@ -134,6 +137,13 @@ def createQueryFromJqlQuery(String jqlQuery) {
     def user = ComponentAccessor.jiraAuthenticationContext.user.directoryUser
     def searchService = ComponentAccessor.getComponent(SearchService.class)
     return searchService.parseQuery(user, jqlQuery).getQuery()
+}
+
+def getDashboardLink(PortalPage dashboard) {
+    def properties = ComponentAccessor.applicationProperties
+    def jiraBaseUrl = properties.getString(APKeys.JIRA_BASEURL)
+    def link = "$jiraBaseUrl/secure/Dashboard.jspa?selectPageId=$dashboard.id"
+    "<a href=\"$link\">$dashboard.name</a>"
 }
 
 mainMethod()
