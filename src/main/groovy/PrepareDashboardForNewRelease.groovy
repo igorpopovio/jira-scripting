@@ -87,6 +87,7 @@ def createFilterBasedOn(SearchRequest filter) {
     newFilter.name = "$filter.name NEW ${new Date()}"
     newFilter.owner = filter.owner
     newFilter.permissions = filter.permissions
+    newFilter.description = "#generated-by-script #date=${new Date().getTime()}"
     def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
     searchRequestManager.create(newFilter)
 }
