@@ -130,16 +130,13 @@ def createServiceContext(ApplicationUser user) {
 def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
     PortalPage
             .portalPage(portalPage)
-            .name(changeToApply(portalPage.name))
+            .name(changeToApply(portalPage.name) + "VVV") // TODO: this must have unique name or else it will fail with "portalPage is null"
             .description(createScriptIdentificationTag())
             .build();
 }
 
 def createScriptIdentificationTag() {
-    def tag = "#generated-by-script #date=${new Date().getTime()}"
-    tag += "<br/>"
-    tag += "#clear-date=${new Date()}"
-    tag
+    "#generated-by-script #date=${new Date().getTime()}"
 }
 
 def extractFilterIdFrom(Map.Entry<String, String> preference) {
