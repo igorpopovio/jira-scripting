@@ -27,7 +27,9 @@ def mainMethod() {
     // ex. http://localhost:2990/jira/secure/Dashboard.jspa?selectPageId=10100
     def idOfDashboardToClone = 10100L
 
-    def newDashboard = createNewDashboardBasedOn(idOfDashboardToClone)
+    def newDashboard = createNewDashboardBasedOn(idOfDashboardToClone) { String originalString ->
+        originalString.replace("2014.4.0", "2015.4.0")
+    }
 
     logMessage "I have cloned the specified dashboard!"
     logMessage "Here is the link: "
@@ -36,18 +38,19 @@ def mainMethod() {
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
 }
 
-def createNewDashboardBasedOn(long idOfPortalPageToClone) {
+def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply) {
     def newDashboard = clonePortalPageById(idOfPortalPageToClone)
     def gadgets = extractGadgetsFrom(newDashboard)
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
                 SearchRequest oldFilter = extractFilterFrom(preference)
-                SearchRequest newFilter = createFilterBasedOn(oldFilter)
+                SearchRequest newFilter = createFilterBasedOn(oldFilter, changeToApply)
                 setGadgetFilter(gadget, preference.key, newFilter)
             }
         }
     }
+    // newDashboard.name = changeToApply(newDashboard.name)
     newDashboard
 }
 
@@ -76,15 +79,15 @@ def extractFilterFrom(Map.Entry<String, String> preference) {
     searchRequestManager.getSearchRequestById(filterId)
 }
 
-def createFilterBasedOn(SearchRequest filter) {
+def createFilterBasedOn(SearchRequest filter, Closure changeToApply) {
     def oldQuery = filter.query.queryString
-    def newQuery = "key=DEMO-1"
+    def newQuery = changeToApply(oldQuery)
     logMessage "The old query is: $oldQuery"
     logMessage "The new query is: $newQuery"
     def query = createQueryFromJqlQuery(newQuery)
 
     def newFilter = new SearchRequest(query)
-    newFilter.name = "$filter.name NEW ${new Date()}"
+    newFilter.name = changeToApply(filter.name)
     newFilter.owner = filter.owner
     newFilter.permissions = filter.permissions
     newFilter.description = "#generated-by-script #date=${new Date().getTime()}"
@@ -102,11 +105,14 @@ def clonePortalPageById(Long idOfPortalPageToClone) {
 
     def portalPage = portalPageService.getPortalPage(createServiceContext(user), idOfPortalPageToClone)
 
-    def favourite = true
-    portalPageService.createPortalPageByClone(
+    def favourite = false
+    def newDashboard = portalPageService.createPortalPageByClone(
             createServiceContext(user),
             createNewPortalPage(portalPage),
             portalPage.id,
+            favourite)
+    portalPageService.updatePortalPage(createServiceContext(user),
+            newDashboard,
             favourite)
 }
 
