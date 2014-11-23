@@ -128,9 +128,13 @@ def createServiceContext(ApplicationUser user) {
 }
 
 def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
+    def name = ""
+    name += changeToApply(portalPage.name)
+    name += " "
+    name += createScriptIdentificationTag() // name must be unique or else it will fail
     PortalPage
             .portalPage(portalPage)
-            .name(changeToApply(portalPage.name) + "VVV") // TODO: this must have unique name or else it will fail with "portalPage is null"
+            .name(name)
             .description(createScriptIdentificationTag())
             .build();
 }
