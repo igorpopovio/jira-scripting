@@ -3,26 +3,36 @@ import com.atlassian.jira.bc.filter.SearchRequestService
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.jira.issue.search.SearchRequest
 import com.atlassian.jira.user.ApplicationUser
+import groovy.time.TimeCategory
+import groovy.time.TimeDuration
 
 finalMessage = ""
-
-GENERATED_BY_SCRIPT_TAG = "#generated-by-script"
 
 def mainMethod() {
     // This script must be run from Jira -> Administration -> Add-ons -> Script Console
 
-    def user = ComponentAccessor.userManager.getUserByKey("admin")
-    def filters = findAllFiltersGeneratedByScriptAndOwnedByUser(user)
+    GENERATED_BY_SCRIPT_TAG = "#generated-by-script"
+    FILTER_OWNER = "admin"
+    TIME = 5.minutes.ago
 
-    logMessage "Will delete these filters:"
-    showFilters(filters)
-    deleteFilters(filters, user)
+    def user = ComponentAccessor.userManager.getUserByKey(FILTER_OWNER)
+    def filters = findAllFiltersGeneratedByScriptAndOwnedByUser(user)
+    filters = findAllFiltersGeneratedAfter(TIME, filters)
+
+
+    def relativeTime = new Date() - TIME
+    logMessage "Will delete the filters generated since ${TIME} ($relativeTime ago)"
+    logFilterDetails(filters)
+    // deleteFilters(filters, user)
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
 }
 
-def showFilters(ArrayList<SearchRequest> filters) {
-    filters.each { filter -> logMessage getFilterDetails(filter) }
+def findAllFiltersGeneratedAfter(Date date, ArrayList<SearchRequest> filters) {
+    filters.findAll { filter ->
+        def generationDate = extractClearDateFrom(filter.description)
+        generationDate.after(date)
+    }
 }
 
 def deleteFilters(ArrayList<SearchRequest> filters, user) {
@@ -32,11 +42,25 @@ def deleteFilters(ArrayList<SearchRequest> filters, user) {
     }
 }
 
-def getFilterDetails(SearchRequest filter) {
-    "id: $filter.id, " +
-            "name: $filter.name, " +
-            "description: $filter.description, " +
-            "query: <pre>$filter.query.queryString</pre>"
+def logFilterDetails(Collection<SearchRequest> filters) {
+    filters.each { filter -> logFilterDetails(filter) }
+}
+
+def logFilterDetails(SearchRequest filter) {
+    def generationDate = extractClearDateFrom(filter.description)
+    def timeSinceGeneration = new Date() - generationDate as TimeDuration;
+    logMessage "<blockquote>"
+    logImportantMessage "Filter name: $filter.name, id: $filter.id"
+    logMessage "description: $filter.description"
+    logMessage "clear date: $generationDate"
+    logMessage "time since creation: $timeSinceGeneration"
+    logMessage "query: <pre>$filter.query.queryString</pre>"
+    logMessage "</blockquote>"
+}
+
+def extractClearDateFrom(String filterDescription) {
+    def time = filterDescription.replace("#generated-by-script #date=", "").toLong()
+    new Date(time)
 }
 
 def createServiceContext(ApplicationUser user) {
@@ -57,4 +81,8 @@ def logMessage(Object message) {
     finalMessage += "${message}<br/>"
 }
 
-mainMethod()
+def logImportantMessage(Object message) {
+    logMessage "<strong>${message}</strong>"
+}
+
+use(TimeCategory) { mainMethod() }
