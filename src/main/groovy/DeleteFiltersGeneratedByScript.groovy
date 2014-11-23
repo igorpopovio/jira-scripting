@@ -50,11 +50,11 @@ def logFilterDetails(SearchRequest filter) {
     def generationDate = extractClearDateFrom(filter.description)
     def timeSinceGeneration = new Date() - generationDate as TimeDuration;
     logMessage "<blockquote>"
-    logImportantMessage "Filter name: $filter.name, id: $filter.id"
-    logMessage "description: $filter.description"
-    logMessage "clear date: $generationDate"
-    logMessage "time since creation: $timeSinceGeneration"
-    logMessage "query: <pre>$filter.query.queryString</pre>"
+    logImportantMessage "FILTER NAME: $filter.name, ID: $filter.id"
+    logMessage "DESCRIPTION: $filter.description"
+    logMessage "CLEAR DATE: $generationDate"
+    logMessage "TIME SINCE CREATION: $timeSinceGeneration"
+    logMessage "QUERY: <pre>$filter.query.queryString</pre>"
     logMessage "</blockquote>"
 }
 

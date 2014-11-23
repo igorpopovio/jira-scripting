@@ -42,18 +42,20 @@ def mainMethod() {
 def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply) {
     def newDashboard = clonePortalPageById(idOfPortalPageToClone, changeToApply)
     def gadgets = extractGadgetsFrom(newDashboard)
-    logImportantMessage "GADGETS WITH FILTERS IN THE NEW DASHBOARD"
+    logImportantMessage "<h1>GADGETS WITH FILTERS IN THE NEW DASHBOARD</h1>"
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
-                logMessage getGadgetDetails(gadget)
+                logImportantMessage "GADGET ${getGadgetDetails(gadget)}"
                 logMessage "<blockquote>"
 
                 SearchRequest oldFilter = extractFilterFrom(preference)
-                logMessage "old filter -> ${getFilterDetails(oldFilter)}"
+                logMessage "OLD FILTER"
+                logFilterDetails(oldFilter)
 
                 SearchRequest newFilter = createFilterBasedOn(oldFilter, changeToApply)
-                logMessage "new filter -> ${getFilterDetails(newFilter)}"
+                logMessage "NEW FILTER"
+                logFilterDetails(newFilter)
 
                 setGadgetFilter(gadget, preference.key, newFilter)
                 logMessage "</blockquote>"
@@ -163,8 +165,15 @@ def getDashboardLink(PortalPage dashboard) {
     "<a href=\"$link\">$dashboard.name</a>"
 }
 
+def getFilterLink(SearchRequest filter) {
+    def properties = ComponentAccessor.applicationProperties
+    def jiraBaseUrl = properties.getString(APKeys.JIRA_BASEURL)
+    def link = "$jiraBaseUrl/issues/?filter=$filter.id"
+    "<a href=\"$link\">$filter.name</a>"
+}
+
 def getGadgetDetails(PortletConfiguration gadget) {
-    "id: $gadget.id, row: $gadget.row, column: $gadget.column, type: ${getGadgetType(gadget)}"
+    "ID: $gadget.id, ROW: $gadget.row, COLUMN: $gadget.column, TYPE: ${getGadgetType(gadget)}"
 }
 
 def getGadgetType(PortletConfiguration gadget) {
@@ -174,8 +183,13 @@ def getGadgetType(PortletConfiguration gadget) {
     type.replace('-', ' ').capitalize()
 }
 
-def getFilterDetails(SearchRequest filter) {
-    "id: $filter.id, name: $filter.name, query: <pre>$filter.query.queryString</pre>"
+def logFilterDetails(SearchRequest filter) {
+    logMessage "<blockquote>"
+    logImportantMessage "FILTER NAME: $filter.name, ID: $filter.id"
+    logMessage "LINK: ${getFilterLink(filter)}"
+    logMessage "DESCRIPTION: $filter.description"
+    logMessage "QUERY: <pre>$filter.query.queryString</pre>"
+    logMessage "</blockquote>"
 }
 
 mainMethod()
