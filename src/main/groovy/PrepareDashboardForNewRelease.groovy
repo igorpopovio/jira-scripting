@@ -31,8 +31,7 @@ def mainMethod() {
         originalString.replace("2014.4.0", "2015.4.0")
     }
 
-    logMessage "I have cloned the specified dashboard!"
-    logMessage "Here is the link: "
+    logImportantMessage "NEW DASHBOARD LINK"
     logImportantMessage getDashboardLink(newDashboard)
 
     return finalMessage // the returned value is shown after the execution in Jira's Web Script Console
@@ -41,12 +40,21 @@ def mainMethod() {
 def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply) {
     def newDashboard = clonePortalPageById(idOfPortalPageToClone, changeToApply)
     def gadgets = extractGadgetsFrom(newDashboard)
+    logImportantMessage "GADGETS WITH FILTERS IN THE NEW DASHBOARD"
     gadgets.each { gadget ->
         gadget.userPrefs.each { preference ->
             if (hasFilter(preference)) {
+                logMessage getGadgetDetails(gadget)
+                logMessage "<blockquote>"
+
                 SearchRequest oldFilter = extractFilterFrom(preference)
+                logMessage "old filter -> ${getFilterDetails(oldFilter)}"
+
                 SearchRequest newFilter = createFilterBasedOn(oldFilter, changeToApply)
+                logMessage "new filter -> ${getFilterDetails(newFilter)}"
+
                 setGadgetFilter(gadget, preference.key, newFilter)
+                logMessage "</blockquote>"
             }
         }
     }
@@ -73,7 +81,6 @@ def setGadgetFilter(PortletConfiguration gadget, String key, SearchRequest filte
 
 def extractFilterFrom(Map.Entry<String, String> preference) {
     def filterId = extractFilterIdFrom(preference)
-    logMessage "The filterId is: $filterId"
     def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
     searchRequestManager.getSearchRequestById(filterId)
 }
@@ -81,8 +88,6 @@ def extractFilterFrom(Map.Entry<String, String> preference) {
 def createFilterBasedOn(SearchRequest filter, Closure changeToApply) {
     def oldQuery = filter.query.queryString
     def newQuery = changeToApply(oldQuery)
-    logMessage "The old query is: $oldQuery"
-    logMessage "The new query is: $newQuery"
     def query = createQueryFromJqlQuery(newQuery)
 
     def newFilter = new SearchRequest(query)
@@ -159,6 +164,21 @@ def getDashboardLink(PortalPage dashboard) {
     def jiraBaseUrl = properties.getString(APKeys.JIRA_BASEURL)
     def link = "$jiraBaseUrl/secure/Dashboard.jspa?selectPageId=$dashboard.id"
     "<a href=\"$link\">$dashboard.name</a>"
+}
+
+def getGadgetDetails(PortletConfiguration gadget) {
+    "id: $gadget.id, row: $gadget.row, column: $gadget.column, type: ${getGadgetType(gadget)}"
+}
+
+def getGadgetType(PortletConfiguration gadget) {
+    def uri = gadget.gadgetURI.toString()
+    def type = uri.substring(uri.lastIndexOf('/') + 1)
+    type = type.substring(0, type.lastIndexOf('.'))
+    type.replace('-', ' ').capitalize()
+}
+
+def getFilterDetails(SearchRequest filter) {
+    "id: $filter.id, name: $filter.name, query: <pre>$filter.query.queryString</pre>"
 }
 
 mainMethod()
