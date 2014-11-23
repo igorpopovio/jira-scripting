@@ -8,7 +8,6 @@ import com.atlassian.jira.issue.search.SearchRequestManager
 import com.atlassian.jira.portal.PortalPage
 import com.atlassian.jira.portal.PortletConfiguration
 import com.atlassian.jira.portal.PortletConfigurationManager
-import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
 
@@ -25,6 +24,9 @@ def mainMethod() {
 
     // how to get the id: go to the URL of the dashboard and take the id
     // ex. http://localhost:2990/jira/secure/Dashboard.jspa?selectPageId=10100
+
+    GENERATED_BY_SCRIPT_TAG = "#generated-by-script"
+    OWNER = ComponentAccessor.userManager.getUserByKey("admin")
     def idOfDashboardToClone = 10100L
 
     def newDashboard = createNewDashboardBasedOn(idOfDashboardToClone) { String originalString ->
@@ -63,10 +65,8 @@ def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply)
 
 def extractGadgetsFrom(PortalPage portalPage) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
-    def user = ComponentAccessor.jiraAuthenticationContext.user
-
     portalPageService
-            .getPortletConfigurations(createServiceContext(user), portalPage.id)
+            .getPortletConfigurations(createServiceContext(), portalPage.id)
             .flatten()
 }
 
@@ -105,17 +105,15 @@ def hasFilter(Map.Entry<String, String> preference) {
 
 def clonePortalPageById(Long idOfPortalPageToClone, Closure changeToApply) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
-    def user = ComponentAccessor.jiraAuthenticationContext.user
-
-    def portalPage = portalPageService.getPortalPage(createServiceContext(user), idOfPortalPageToClone)
+    def portalPage = portalPageService.getPortalPage(createServiceContext(), idOfPortalPageToClone)
 
     def favourite = true
     def newDashboard = portalPageService.createPortalPageByClone(
-            createServiceContext(user),
+            createServiceContext(),
             createNewPortalPage(portalPage, changeToApply),
             portalPage.id,
             favourite)
-    portalPageService.updatePortalPage(createServiceContext(user),
+    portalPageService.updatePortalPage(createServiceContext(),
             newDashboard,
             favourite)
 }
@@ -128,8 +126,8 @@ def logImportantMessage(Object message) {
     logMessage "<strong>${message}</strong>"
 }
 
-def createServiceContext(ApplicationUser user) {
-    new JiraServiceContextImpl(user)
+def createServiceContext() {
+    new JiraServiceContextImpl(OWNER)
 }
 
 def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
@@ -145,7 +143,7 @@ def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
 }
 
 def createScriptIdentificationTag() {
-    "#generated-by-script #date=${new Date().getTime()}"
+    "$GENERATED_BY_SCRIPT_TAG #date=${new Date().getTime()}"
 }
 
 def extractFilterIdFrom(Map.Entry<String, String> preference) {
@@ -154,9 +152,8 @@ def extractFilterIdFrom(Map.Entry<String, String> preference) {
 }
 
 def createQueryFromJqlQuery(String jqlQuery) {
-    def user = ComponentAccessor.jiraAuthenticationContext.user.directoryUser
     def searchService = ComponentAccessor.getComponent(SearchService.class)
-    return searchService.parseQuery(user, jqlQuery).getQuery()
+    return searchService.parseQuery(OWNER.directoryUser, jqlQuery).getQuery()
 }
 
 def getDashboardLink(PortalPage dashboard) {
