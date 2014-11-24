@@ -8,6 +8,7 @@ import com.atlassian.jira.issue.search.SearchRequestManager
 import com.atlassian.jira.portal.PortalPage
 import com.atlassian.jira.portal.PortletConfiguration
 import com.atlassian.jira.portal.PortletConfigurationManager
+import com.atlassian.jira.user.ApplicationUser
 
 finalMessage = ""
 
@@ -26,8 +27,9 @@ def mainMethod() {
     // ex. http://localhost:2990/jira/secure/Dashboard.jspa?selectPageId=10100
 
     GENERATED_BY_SCRIPT_TAG = "#generated-by-script"
-    OWNER = ComponentAccessor.userManager.getUserByKey("admin")
-    def idOfDashboardToClone = 10100L
+    ORIGINAL_OWNER = ComponentAccessor.userManager.getUserByKey("user")
+    TARGET_OWNER = ComponentAccessor.userManager.getUserByKey("admin")
+    def idOfDashboardToClone = 10500L
 
     def newDashboard = createNewDashboardBasedOn(idOfDashboardToClone) { String originalString ->
         originalString.replace("2014.4.0", "2015.4.0")
@@ -68,7 +70,7 @@ def createNewDashboardBasedOn(long idOfPortalPageToClone, Closure changeToApply)
 def extractGadgetsFrom(PortalPage portalPage) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
     portalPageService
-            .getPortletConfigurations(createServiceContext(), portalPage.id)
+            .getPortletConfigurations(createServiceContext(portalPage.owner), portalPage.id)
             .flatten()
 }
 
@@ -94,7 +96,7 @@ def createFilterBasedOn(SearchRequest filter, Closure changeToApply) {
 
     def newFilter = new SearchRequest(query)
     newFilter.name = changeToApply(filter.name)
-    newFilter.owner = filter.owner
+    newFilter.owner = TARGET_OWNER
     newFilter.permissions = filter.permissions
     newFilter.description = createScriptIdentificationTag()
     def searchRequestManager = ComponentAccessor.getComponent(SearchRequestManager.class)
@@ -107,15 +109,18 @@ def hasFilter(Map.Entry<String, String> preference) {
 
 def clonePortalPageById(Long idOfPortalPageToClone, Closure changeToApply) {
     def portalPageService = ComponentAccessor.getComponent(PortalPageService.class)
-    def portalPage = portalPageService.getPortalPage(createServiceContext(), idOfPortalPageToClone)
+    def originalContextOwner = createServiceContext(ORIGINAL_OWNER)
+    def targetContextOwner = createServiceContext(TARGET_OWNER)
+    def portalPage = portalPageService.getPortalPage(originalContextOwner, idOfPortalPageToClone)
 
     def favourite = true
     def newDashboard = portalPageService.createPortalPageByClone(
-            createServiceContext(),
+            targetContextOwner,
             createNewPortalPage(portalPage, changeToApply),
             portalPage.id,
             favourite)
-    portalPageService.updatePortalPage(createServiceContext(),
+
+    portalPageService.updatePortalPage(targetContextOwner,
             newDashboard,
             favourite)
 }
@@ -128,8 +133,8 @@ def logImportantMessage(Object message) {
     logMessage "<strong>${message}</strong>"
 }
 
-def createServiceContext() {
-    new JiraServiceContextImpl(OWNER)
+def createServiceContext(ApplicationUser user) {
+    new JiraServiceContextImpl(user)
 }
 
 def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
@@ -141,6 +146,7 @@ def createNewPortalPage(PortalPage portalPage, Closure changeToApply) {
             .portalPage(portalPage)
             .name(name)
             .description(createScriptIdentificationTag())
+            .owner(TARGET_OWNER)
             .build();
 }
 
@@ -155,7 +161,7 @@ def extractFilterIdFrom(Map.Entry<String, String> preference) {
 
 def createQueryFromJqlQuery(String jqlQuery) {
     def searchService = ComponentAccessor.getComponent(SearchService.class)
-    return searchService.parseQuery(OWNER.directoryUser, jqlQuery).getQuery()
+    return searchService.parseQuery(ORIGINAL_OWNER.directoryUser, jqlQuery).getQuery()
 }
 
 def getDashboardLink(PortalPage dashboard) {
