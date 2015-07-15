@@ -9,6 +9,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.codehaus.groovy:groovy-all:2.3.6'
-    compile 'com.atlassian.jira:jira-core:6.3.6'
+    compile 'org.codehaus.groovy:groovy-all:2.4.3'
+    compile 'com.atlassian.jira:jira-core:6.4.7'
 }
+
