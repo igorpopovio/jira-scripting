@@ -1,5 +1,7 @@
-apply plugin: 'groovy'
-apply plugin: 'idea'
+plugins {
+    id 'groovy'
+    id 'idea'
+}
 
 defaultTasks 'idea'
 
