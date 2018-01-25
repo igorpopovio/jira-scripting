@@ -161,7 +161,7 @@ def extractFilterIdFrom(Map.Entry<String, String> preference) {
 
 def createQueryFromJqlQuery(String jqlQuery) {
     def searchService = ComponentAccessor.getComponent(SearchService.class)
-    return searchService.parseQuery(ORIGINAL_OWNER.directoryUser, jqlQuery).getQuery()
+    return searchService.parseQuery(ORIGINAL_OWNER, jqlQuery).getQuery()
 }
 
 def getDashboardLink(PortalPage dashboard) {
